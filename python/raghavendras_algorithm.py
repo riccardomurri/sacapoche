@@ -2,10 +2,15 @@
 # -*- coding: utf-8 -*-
 #
 """
-Implementation of Raghavendra's linear systems solver.
+Implementation of Raghavendra's linear systems solver
+over finite fields.
 
+See:
+
+* http://www.eecs.berkeley.edu/~prasad/linsystems.pdf
+* https://rjlipton.wordpress.com/2012/08/09/a-new-way-to-solve-linear-equations/
 """
-# Copyright (C) 2013 University of Zurich. All rights reserved.
+# Copyright (C) 2012-2013 University of Zurich. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,9 +22,8 @@ Implementation of Raghavendra's linear systems solver.
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 __version__ = '$Revision$'
 __author__ = 'Riccardo Murri <riccardo.murri@gmail.com>'

@@ -1,9 +1,17 @@
 #! /usr/bin/env python
 #
 """
-Implementation of Fliege 2012
+Implementation of Fliege's linear system solver, as described in:
+
+  *A Randomized Parallel Algorithm with Run Time `O(n^2)`
+  for Solving an `n` by `n` System of Linear Equations,*
+  Joerg Fliege, arXiv:1209.3995v1.
+
+The code in this program uses exact arithmetic (fractions of
+arbitrary-precision integers) to avoid numerical stability issues.
+
 """
-# Copyright (C) 2013 University of Zurich. All rights reserved.
+# Copyright (C) 2012-2013 University of Zurich. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,9 +23,8 @@ Implementation of Fliege 2012
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 __version__ = '$Revision$'
 __author__ = 'Benjamin Jonen <benjamin.jonen@bf.uzh.ch>, Riccardo Murri <riccardo.murri@gmail.com>'
