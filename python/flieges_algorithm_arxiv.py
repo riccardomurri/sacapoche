@@ -34,23 +34,37 @@ import random  # used for non-repetitive random number
 import numpy as np
 import numpy.linalg
 
+
+## test parameters
+#
+# vary these settings to test the algorithm over different base
+# fields, matrix dimensions etc.
+
+# vector length
+n = 5
+
+# a function returning a random vector of length `n`;
+# the default implementation chooses all coordinates
+# uniformly from the flotaing-point range [0,1].
+random_vector = np.random.rand
+
+
+## main algorithm
+
 # floating point constants (machine-dependent)
 fpinfo = np.finfo(float)
 EPSILON = fpinfo.eps
 TINY = fpinfo.tiny
 LARGE = fpinfo.max / 2.
 
-# Set numpy print options
-np.set_printoptions(linewidth=300, precision=5, suppress=True)
-
-def main_algo(A, b, sample_fn=np.random.random):
-    '''
+def solve(A, b, sample_fn=random_vector):
+    """
     Return a list of (approximate) solutions to the linear system `Ax = b`.
 
     :param A: a NumPy `m` times `n` 2D-array, representing a matrix with `m` rows and `n` columns
     :param b: a Numpy 1D-array real-valued vector of `n` elements
     :param sample_fn: a function returning a random 1D-vector; the default implementation chooses all coordinates uniformly from the interval [0,1].
-    '''
+    """
     # Input:
     # * A is a with m row vectors
     m = A.shape[0]
@@ -99,14 +113,13 @@ def main_algo(A, b, sample_fn=np.random.random):
 
 
 def rec(u, v, a, beta, q=0):
-    '''
+    """
     Recombination function, as defined in Fliege (2012).
 
     If the optional parameter `q` is > 0, then ensure that the
     denominator in the `t` factor is larger than `q`, by substituting
     `v` for a random convex combination of `u` and `v`.
-
-    '''
+    """
     t0 = beta - np.dot(a, v)
     t1 = np.dot(a, (u - v))
     #assert np.abs(t1) > EPSILON
@@ -119,8 +132,13 @@ def rec(u, v, a, beta, q=0):
     return  (t * u + (1. - t) * v)
 
 
-def _check_distance(A, b, vs):
-    print "Final values of v's:"
+def _check_distance(A, b, vs, k=None):
+    if k is None:
+        k = len(b)
+    if k == len(b):
+        print ("Final values of v's:")
+    else:
+        print ("Values of v's after iteration %d" % k)
     for l, v_l in enumerate(vs):
       print "  v_%d = %s" % (l, v_l)
     print "Distances of solutions computed by Fliege's algorithm:"
@@ -143,18 +161,18 @@ def test_with_random_matrix(dim=5):
     rank = np.linalg.matrix_rank(A)
     assert rank == dim, 'Matrix needs to have full rank. '
 
-    res = main_algo(A, b)
+    sol = solve(A, b)
 
-    _check_distance(A, b, res)
+    _check_distance(A, b, sol)
 
 
 def test_with_identity_matrix(dim=5):
     A = np.eye(dim)
     b = np.random.randint(low=1, high=9,size=(dim,))
 
-    res = main_algo(A, b)
+    sol = solve(A, b)
 
-    _check_distance(A, b, res)
+    _check_distance(A, b, sol)
 
 
 if __name__ == '__main__':
@@ -162,5 +180,8 @@ if __name__ == '__main__':
     # Fix random numbers for debugging
     #np.random.seed(100)
 
-    test_with_identity_matrix()
-    #test_with_random_matrix()
+    # Set numpy print options
+    np.set_printoptions(linewidth=300, precision=5, suppress=True)
+
+    test_with_identity_matrix(n)
+    test_with_random_matrix(n)

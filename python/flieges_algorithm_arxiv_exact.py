@@ -31,13 +31,6 @@ __author__ = 'Benjamin Jonen <benjamin.jonen@bf.uzh.ch>, Riccardo Murri <riccard
 __docformat__ = 'reStructuredText'
 
 
-# set `numtype` to the a function that takes a (small) integer number
-# and returns it converted to a chosen exact/arbitrary-precision
-# numeric type.  The constructors of the Python standard
-# `fractions.Fraction` and `fractions.Decimal` types are both OK.
-import fractions
-numtype = fractions.Fraction
-
 import math
 import os
 import sys
@@ -46,60 +39,40 @@ import random  # used for non-repetitive random number
 import numpy as np
 import numpy.linalg
 
-# Set numpy print options
-np.set_printoptions(linewidth=300, precision=5, suppress=True)
+from lib.linalg import *
 
-## linear algebra utilities
 
-def dot_product(x, y):
-    """Return the dot product of two vectors `x` and `y`."""
-    assert len(x) == len(y)
-    return sum((x[i]*y[i]) for i in range(len(x)))
+## test parameters
+#
+# vary these settings to test the algorithm over different base
+# fields, matrix dimensions etc.
 
-def matrix_vector_product(M, x):
-    """
-    Return the product of matrix `M` and vector `x`.
-    """
-    assert len(M) == 0 or len(M[0]) == len(x)
-    return [ dot_product(m, x) for m in M ]
+# vector length
+n = 5
 
-def norm(x):
-    """
-    Return the Euclidean norm of vector `x`.
-    """
-    return math.sqrt(sum(x[i]*x[i] for i in range(len(x))))
+# a function returning a random number to be used as a vector
+# coordinate; the default implementation chooses all coordinates
+# uniformly from the specified integer interval.
+random_elt = (lambda: random.randint(0, 16))
 
-def identity_matrix(N):
-    """
-    Return the N by N identity matrix.
-    """
-    return [
-        [ numtype(1 if (i==j) else 0) for j in range(N) ]
-        for i in range(N)
-    ]
-
-def make_random_vector(dim, distribution=(lambda: numtype(random.random()))):
-    """
-    Return a random vector of size `dim`.
-
-    Entries are sampled from the given distribution function.
-    """
-    return [ numtype(distribution()) for _ in range(dim) ]
-
-def prettyprint_vector(x):
-    return '[ ' + str.join(" ", (str(x_l) for x_l in x)) + ' ]'
+# set `numtype` to the a function that takes a (small) integer number
+# and returns it converted to a chosen exact/arbitrary-precision
+# numeric type.  The constructors of the Python standard
+# `fractions.Fraction` and `fractions.Decimal` types are both OK.
+import fractions
+numtype = fractions.Fraction
 
 
 ## main algorithm
 
-def main_algo(A, b, sample_fn=make_random_vector):
-    '''
+def solve(A, b, sample_fn):
+    """
     Return a list of (approximate) solutions to the linear system `Ax = b`.
 
     :param A: a NumPy `m` times `n` 2D-array, representing a matrix with `m` rows and `n` columns
     :param b: a Numpy 1D-array real-valued vector of `n` elements
-    :param sample_fn: a function returning a random 1D-vector; the default implementation chooses all coordinates uniformly from the interval [0,1].
-    '''
+    :param sample_fn: a function returning a random number to be used as a vector coordinate
+    """
     # Input:
     # * A is a with m row vectors
     m = len(A)
@@ -113,23 +86,27 @@ def main_algo(A, b, sample_fn=make_random_vector):
     print "Given data:"
     print "  m = ", m
     print "  n = ", n
-    print "  A = ", str.join("\n       ", str(A).split('\n'))
-    print "  b = ", b
+    print "  A = ", prettyprint_matrix(A, indent=8)
+    print "  b = ", prettyprint_vector(b)
 
     # Step 2. Generate random sample of normals (fulfilling Assumption 1.)
-    v = [ sample_fn(n) for _ in range(n+1) ] # n+1 random vectors of n elements each
+    v = [ make_random_vector(n, numtype, sample_fn) for _ in range(n+1) ]
     print "Initial choices of v's:"
     for l, v_l in enumerate(v):
         print "  v_%d = %s" % (l, prettyprint_vector(v_l))
 
-    ij_pairs = [ (0,j) for j in range(1,n+1) ] + [ tuple(random.sample(range(1,n+1), 2)) ]
-    print 'ij_pairs = ', ij_pairs
-    assert len(ij_pairs) == len(v)
+    # save all (i,j) pairs for later -- this is invariant in the Step 3 loop
+    all_ij_pairs = [ (i,j) for i in range(n+1) for j in range(n+1) if i<j ]
+    #print 'potential ij_pairs = ', all_ij_pairs
+    assert len(all_ij_pairs) == ((n+1)*n / 2)
 
     # Step 3.
     for k in range(m): # loop over eqs
         print "Step 3, iteration %d starting ..." % k
-        # Step 3(a): CANCELED, we now use a fixed set of indices
+        # Step 3(a): choose n+1 random pairs (i_l, j_l) with i_l < j_l
+        # pick randomly from all_ij_pairs set to get n+1 random pairs
+        ij_pairs = random.sample(all_ij_pairs, n+1)
+        assert len(ij_pairs) == n+1
         print '  ij_pairs = ', ij_pairs
         # Step 3(b): recombine the v's; use x's as temporary storage
         try:
@@ -137,7 +114,7 @@ def main_algo(A, b, sample_fn=make_random_vector):
                   for l, (i, j) in enumerate(ij_pairs)
               ]
         except ZeroDivisionError:
-            print ('**** STOP in main_algo() ****')
+            print ('**** STOP in solve() ****')
             for l in range(len(x)):
                 print ("x_%d = %s" % (l, prettyprint_vector(x[l])))
             raise
@@ -151,15 +128,10 @@ def main_algo(A, b, sample_fn=make_random_vector):
     return v
 
 
-def rec(u, v, a, beta, q=0):
-    '''
-    Recombination function, as defined in Fliege (2012).
-
-    If the optional parameter `q` is > 0, then ensure that the
-    denominator in the `t` factor is larger than `q`, by substituting
-    `v` for a random convex combination of `u` and `v`.
-
-    '''
+def rec(u, v, a, beta):
+    """
+    Recombination function.
+    """
     assert len(u) == len(v)
     assert len(v) == len(a)
     t0 = beta - dot_product(a, v)
@@ -177,7 +149,10 @@ def rec(u, v, a, beta, q=0):
 def _check_distance(A, b, vs, k=None):
     if k is None:
         k = len(b)
-    print "Final values of v's:"
+    if k == len(b):
+        print ("Final values of v's:")
+    else:
+        print ("Values of v's after step %d" % k)
     for l, v_l in enumerate(vs):
       print "  v_%d = %s" % (l, prettyprint_vector(v_l))
     print "Distances of solutions computed by Fliege's algorithm:"
@@ -207,18 +182,18 @@ def test_with_random_matrix(dim=5):
     b = np.random.randint(low=1, high=9,size=(dim,))
 
     rank = np.linalg.matrix_rank(A)
-    assert rank == dim, 'Matrix needs to have full rank. '
+    assert rank == dim, 'Matrix A needs to have full rank. '
 
-    x = main_algo(A, b)
+    x = solve(A, b, random_elt)
 
     _check_distance(A, b, x)
 
 
 def test_with_identity_matrix(dim=5):
-    A = identity_matrix(dim)
-    b = [ numtype(random.randint(1,9)) for _ in range(dim) ]
+    A = identity_matrix(dim, numtype)
+    b = make_random_vector(dim, numtype, random_elt)
 
-    x = main_algo(A, b)
+    x = solve(A, b, random_elt)
 
     _check_distance(A, b, x)
 
@@ -228,5 +203,8 @@ if __name__ == '__main__':
     # Fix random numbers for debugging
     #np.random.seed(100)
 
+    # Set numpy print options
+    np.set_printoptions(linewidth=300, precision=5, suppress=True)
+
     test_with_identity_matrix()
-    #test_with_random_matrix()
+    test_with_random_matrix()
