@@ -1,8 +1,8 @@
 <!-- this file uses MarkDown syntax,
     see: http://daringfireball.net/projects/markdown/ -->
 
-This repository hosts sample code implementing the Raghavendra-Fliege
-algorithm for solving linear systems.
+This repository hosts sample code implementing the
+[Raghavendra][1]-[Fliege][3] algorithm for solving linear systems.
 
 
 Available code
