@@ -42,6 +42,9 @@ import logbook
 # vary these settings to test the algorithm over different base
 # fields, matrix dimensions etc.
 
+# number of equations
+dim = 5
+
 # vector length
 n = 5
 
@@ -194,6 +197,28 @@ def test_with_identity_matrix(dim=5):
 
     _check_distance(A, b, sol)
 
+def test_with_fixed_v(dim=5,v=np.random.randn(dim + 1,n),N=1000):
+    log.info('Starting test with %d trials' % N)
+    log.info('v = \n%s' % v)
+    def fixed_v(n):
+        global ctr
+        ctr += 1
+        return v[ctr % (n +1)]
+    for ix in range(N):
+        global ctr
+        ctr = -1
+
+        A = np.random.randint(low=1, high=9,size=(dim, dim))
+        b = np.random.randint(low=1, high=9,size=(dim,))
+    
+        sol = solve(A, b, sample_fn=fixed_v)
+    
+        dist = _check_distance(A, b, sol)
+        if dist > 1.e-10:
+            log.critical("Algorithm did not converge at trial %d" % ix)
+            log.critical('A = %s' % A)
+            log.critical('b = %s' % b)
+    log.info('Completed test with %d trials' % N)
 
 if __name__ == '__main__':
 
@@ -203,5 +228,6 @@ if __name__ == '__main__':
     # Set numpy print options
     np.set_printoptions(linewidth=300, precision=5, suppress=True)
 
-    test_with_identity_matrix(n)
-    test_with_random_matrix(n)
+    #test_with_identity_matrix(n)
+    #test_with_random_matrix(n)
+    test_with_fixed_v()
