@@ -158,7 +158,7 @@ def _check_distance(A, b, vs, k=None):
     else:
         log.debug("Values of v's after iteration %d:" % k)
     for l, v_l in enumerate(vs):
-      log.debug("  v_%d = %s" % (l, v_l))
+        log.debug("  v_%d = %s" % (l, v_l))
     if k == len(b):
         log.debug("Distances of solutions computed by Fliege's algorithm:")
     else:
@@ -214,8 +214,8 @@ def test_with_fixed_v(dim=5,v=np.random.randn(dim + 1,n),N=1000):
         sol = solve(A, b, sample_fn=fixed_v)
     
         dist = _check_distance(A, b, sol)
-        if dist > 1.e-10:
-            log.critical("Algorithm did not converge at trial %d" % ix)
+        if dist > 1.e-5:
+            log.critical("Algorithm did not converge at trial %d. 2-normed distance = %15.10f" % (ix,dist))
             log.critical('A = %s' % A)
             log.critical('b = %s' % b)
     log.info('Completed test with %d trials' % N)
