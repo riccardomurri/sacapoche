@@ -39,7 +39,7 @@ import random  # used for non-repetitive random number
 # local imports
 from lib.modular import Modular
 from lib.linalg import *
-
+import lib.log
 
 ## test parameters
 #
@@ -60,6 +60,8 @@ random_elt = (lambda: random.randint(0, q-1))
 
 ## main program
 
+log = lib.log.init()
+
 # modular arithmetic modulo `q`
 numtype = (lambda x: Modular(x, q))
 
@@ -79,12 +81,12 @@ def solve(A, b, N, sample_fn):
     # b is a column vector with n rows
     assert m == len(b)
     # DEBUG
-    print "Given data:"
-    print "  m = ", m
-    print "  n = ", n
-    print "  A = ", prettyprint_matrix(A, indent=8)
-    print "  b = ", prettyprint_vector(b)
-    print "  N = ", N
+    log.debug("Given data:")
+    log.debug("  m = %s", m)
+    log.debug("  n = %s", n)
+    log.debug("  A = %s", prettyprint_matrix(A, indent=8))
+    log.debug("  b = %s", prettyprint_vector(b))
+    log.debug("  N = %s", N)
 
     # Step 1. Sample N random vectors S_0 = {z_1, ... , z_N} where each z_i is i.i.d uniform.
     z = [ make_random_vector(n, numtype, sample_fn) for _ in range(N) ]
@@ -94,12 +96,12 @@ def solve(A, b, N, sample_fn):
 
     # Step 2.
     for i in range(m): # for each constraint `A_i x = b_i` do:
-        print "Step 2, imposing %d-th constraint ..." % i
+        log.debug("Step 2, imposing %d-th constraint ...", i)
         # Step 2(a): selection
         t = [ z_l for z_l in z if (dot_product(A[i], z_l) == b[i]) ]
         # Step 2(b): recombination
         if len(t) == 0: # if T=\emptyset, then SYSTEM INFEASIBLE
-            print ("*** SYSTEM INFEASIBLE: No vector satisfies constraint A_%d" % i)
+            log.critical(("SYSTEM INFEASIBLE: No vector satisfies constraint A_%d", i))
             raise RuntimeError("SYSTEM INFEASIBLE: No vector satisfies constraint A_%d" % i)
         else:
             z = recombine(t, N)
@@ -126,10 +128,10 @@ def recombine(t, N):
 def _check_solution(A, b, z):
     for z_l in z:
         assert z_l == z[0]
-    print "OK: All final vectors are equal!"
+    log.debug("OK: All final vectors are equal!")
     for i in range(len(b)):
         assert b[i] == dot_product(A[i], z[0])
-    print "OK: final vector(s) are a solution of the system Ax=b!"
+    log.debug("OK: final vector(s) are a solution of the system Ax=b!")
 
 
 def test_with_random_matrix(dim=5, N=None):

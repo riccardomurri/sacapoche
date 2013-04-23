@@ -40,6 +40,7 @@ import numpy as np
 import numpy.linalg
 
 from lib.linalg import *
+import lib.log
 
 
 ## test parameters
@@ -65,6 +66,8 @@ numtype = fractions.Fraction
 
 ## main algorithm
 
+log = lib.log.init()
+
 def solve(A, b, sample_fn):
     """
     Return a list of (approximate) solutions to the linear system `Ax = b`.
@@ -83,17 +86,17 @@ def solve(A, b, sample_fn):
     # consistency checks
     assert n**2/n>4, "n is not large enough. Increase eq. system to fulfill n**2>4n"
     # DEBUG
-    print "Given data:"
-    print "  m = ", m
-    print "  n = ", n
-    print "  A = ", prettyprint_matrix(A, indent=8)
-    print "  b = ", prettyprint_vector(b)
+    log.debug("Given data:")
+    log.debug("  m = %s", m)
+    log.debug("  n = %s", n)
+    log.debug("  A = %s", prettyprint_matrix(A, indent=8))
+    log.debug("  b = %s", prettyprint_vector(b))
 
     # Step 2. Generate random sample of normals (fulfilling Assumption 1.)
     v = [ make_random_vector(n, numtype, sample_fn) for _ in range(n+1) ]
-    print "Initial choices of v's:"
+    log.debug("Initial choices of v's:")
     for l, v_l in enumerate(v):
-        print "  v_%d = %s" % (l, prettyprint_vector(v_l))
+        log.debug("  v_%d = %s", l, prettyprint_vector(v_l))
 
     # save all (i,j) pairs for later -- this is invariant in the Step 3 loop
     all_ij_pairs = [ (i,j) for i in range(n+1) for j in range(n+1) if i<j ]
@@ -102,21 +105,21 @@ def solve(A, b, sample_fn):
 
     # Step 3.
     for k in range(m): # loop over eqs
-        print "Step 3, iteration %d starting ..." % k
+        log.debug("Step 3, iteration %d starting ...", k)
         # Step 3(a): choose n+1 random pairs (i_l, j_l) with i_l < j_l
         # pick randomly from all_ij_pairs set to get n+1 random pairs
         ij_pairs = random.sample(all_ij_pairs, n+1)
         assert len(ij_pairs) == n+1
-        print '  ij_pairs = ', ij_pairs
+        log.debug('  ij_pairs = %s', ij_pairs)
         # Step 3(b): recombine the v's; use x's as temporary storage
         try:
             x = [ rec(v[i], v[j], A[k], b[k])
                   for l, (i, j) in enumerate(ij_pairs)
               ]
         except ZeroDivisionError:
-            print ('**** STOP in solve() ****')
+            log.debug(('**** STOP in solve() ****'))
             for l in range(len(x)):
-                print ("x_%d = %s" % (l, prettyprint_vector(x[l])))
+                log.debug(("x_%d = %s", l, prettyprint_vector(x[l])))
             raise
         # Step 3(d): rename x's -> v's
         for l in range(n+1):
@@ -137,10 +140,10 @@ def rec(u, v, a, beta):
     t0 = beta - dot_product(a, v)
     t1 = dot_product(a, [(u[i] - v[i]) for i in range(len(u))])
     if t1 == 0:
-        print ("**** STOP in rec() ****")
-        print ("u = %s" % prettyprint_vector(u))
-        print ("v = %s" % prettyprint_vector(v))
-        print ("a = %s" % prettyprint_vector(a))
+        log.error("**** STOP in rec() ****")
+        log.debug("u = %s", prettyprint_vector(u))
+        log.debug("v = %s", prettyprint_vector(v))
+        log.debug("a = %s", prettyprint_vector(a))
         raise ZeroDivisionError()
     t = t0 / t1
     return  [ (t*u[i] + (1-t)*v[i]) for i in range(len(u)) ]
@@ -150,31 +153,31 @@ def _check_distance(A, b, vs, k=None):
     if k is None:
         k = len(b)
     if k == len(b):
-        print ("Final values of v's:")
+        log.debug(("Final values of v's:"))
     else:
-        print ("Values of v's after step %d" % k)
+        log.debug(("Values of v's after step %d", k))
     for l, v_l in enumerate(vs):
-      print "  v_%d = %s" % (l, prettyprint_vector(v_l))
-    print "Distances of solutions computed by Fliege's algorithm:"
+      log.debug("  v_%d = %s", l, prettyprint_vector(v_l))
+    log.debug("Distances of solutions computed by Fliege's algorithm:")
     for l, v_l in enumerate(vs):
         dist = norm([
             matrix_vector_product(A,v_l)[i] - b[i]
             for i in range(k)
         ])
-        print ("  |Av_%d - b| = %g" % (l, dist))
+        log.debug(("  |Av_%d - b| = %g", l, dist))
 
     if k == len(b):
-        print "Numpy's `linalg.solve` solution:"
+        log.debug("Numpy's `linalg.solve` solution:")
         A_ = np.array([ [ float(A[i][j])
                           for j in range(len(A[0])) ]
                         for i in range(len(A)) ],
                       ndmin=2)
         b_ = np.array([ float(b[k]) for k in range(len(b)) ])
         v_prime = np.linalg.solve(A_, b_)
-        print "  v' = %s" % v_prime
-        print "Distance of Numpy's `linalg.solve` solution:"
+        log.debug("  v' = %s", v_prime)
+        log.debug("Distance of Numpy's `linalg.solve` solution:")
         dist_prime = np.linalg.norm(np.dot(A_,v_prime) - b_)
-        print ("  |Av' - b| = %g" % dist_prime)
+        log.debug(("  |Av' - b| = %g", dist_prime))
 
 
 def test_with_random_matrix(dim=5):
