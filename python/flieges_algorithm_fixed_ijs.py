@@ -35,7 +35,7 @@ import random  # used for non-repetitive random number
 import numpy as np
 import numpy.linalg
 
-import logbook
+import lib.log
 
 ## test parameters
 #
@@ -53,24 +53,16 @@ n = 5
 # uniformly from the flotaing-point range [0,1].
 random_vector = np.random.rand
 
-# log level
-log_lvl = 'INFO'
-
 
 ## main algorithm
+
+log = lib.log.init()
 
 # floating point constants (machine-dependent)
 fpinfo = np.finfo(float)
 EPSILON = fpinfo.eps
 TINY = fpinfo.tiny
 LARGE = fpinfo.max / 2.
-
-# Set up logbook
-log = logbook.Logger('logbook_log')
-stdErr = list(logbook.handlers.Handler.stack_manager.iter_context_objects())[0]
-stdErr.pop_application()
-mySH = logbook.StreamHandler(stream = sys.stdout, level = log_lvl, format_string = '{record.message}', bubble = True)
-log.handlers.append(mySH)
 
 def solve(A, b, sample_fn=random_vector):
     """
@@ -91,26 +83,26 @@ def solve(A, b, sample_fn=random_vector):
     #assert n**2/n>4, "n is not large enough. Increase eq. system to fulfill n**2>4n"
     # DEBUG
     log.debug("Given data:")
-    log.debug("  m = ", m)
-    log.debug("  n = ", n)
-    log.debug("  A = ", str.join("\n       ", str(A).split('\n')))
-    log.debug("  b = ", b)
+    log.debug("  m = %s", m)
+    log.debug("  n = %s", n)
+    log.debug("  A = %s", str.join("\n       ", str(A).split('\n')))
+    log.debug("  b = %s", b)
 
     # Step 2. Generate random sample of normals (fulfilling Assumption 1.)
     v = [ sample_fn(n) for _ in range(n+1) ] # n+1 random vectors of n elements each
     log.debug("Initial choices of v's:")
     for l, v_l in enumerate(v):
-        log.debug("  v_%d = %s" % (l, v_l))
+        log.debug("  v_%d = %s", l, v_l)
 
     ij_pairs = [ (j % (n+1), (j+1) % (n+1)) for j in range(0,n+1) ]
-    log.debug('ij_pairs = ', ij_pairs)
+    log.debug('ij_pairs = %s', ij_pairs)
     assert len(ij_pairs) == len(v)
 
     # Step 3.
     for k in range(m): # loop over eqs
-        log.debug("Step 3, iteration %d starting ..." % k)
+        log.debug("Step 3, iteration %d starting ...", k)
         # Step 3(a): CANCELED, we now use a fixed set of indices
-        log.debug('  ij_pairs = ', ij_pairs)
+        log.debug('  ij_pairs = %s', ij_pairs)
         # Step 3(b): recombine the v's; use x's as temporary storage
         x = [ rec(v[i], v[j], A[k,:], b[k])
               for l, (i, j) in enumerate(ij_pairs)
@@ -145,7 +137,7 @@ def rec(u, v, a, beta, q=0):
     if t1 == 0:
         raise ZeroDivisionError()
     elif t1 < TINY:
-        log.debug("*** WARNING: tiny denominator in rec(%s, %s, %s, %s)" % (u,v,a,beta))
+        log.warning("tiny denominator in rec(%s, %s, %s, %s)", u,v,a,beta)
     t = t0 / t1
     return  (t * u + (1. - t) * v)
 
@@ -156,24 +148,24 @@ def _check_distance(A, b, vs, k=None):
     if k == len(b):
         log.debug("Final values of v's:")
     else:
-        log.debug("Values of v's after iteration %d:" % k)
+        log.debug("Values of v's after iteration %d:", k)
     for l, v_l in enumerate(vs):
-        log.debug("  v_%d = %s" % (l, v_l))
+        log.debug("  v_%d = %s", l, v_l)
     if k == len(b):
         log.debug("Distances of solutions computed by Fliege's algorithm:")
     else:
-        log.debug("Accuracy of solutions of the first %d equations:" % (k+1))
+        log.debug("Accuracy of solutions of the first %d equations:", (k+1))
     for l, v_l in enumerate(vs):
         dist = np.linalg.norm(np.dot(A[0:k,:],v_l) - b[0:k])
-        log.debug("  |Av_%s - b| = %g" % (l, dist))
+        log.debug("  |Av_%s - b| = %g", l, dist)
 
     if k == len(b):
         log.debug("Numpy's `linalg.solve` solution:")
         v_prime = np.linalg.solve(A,b)
-        log.debug("  v' = %s" % v_prime)
+        log.debug("  v' = %s", v_prime)
         log.debug("Distance of Numpy's `linalg.solve` solution:")
         dist_prime = np.linalg.norm(np.dot(A,v_prime) - b)
-        log.debug("  |Av' - b| = %g" % dist_prime)
+        log.debug("  |Av' - b| = %g", dist_prime)
     return dist
 
 
@@ -199,7 +191,7 @@ def test_with_identity_matrix(dim=5):
 
 def test_with_fixed_v(dim=5,v=np.random.randn(dim + 1,n),N=1000):
     log.info('Starting test with %d trials' % N)
-    log.info('v = \n%s' % v)
+    log.debug('v = \n%s', v)
     def fixed_v(n):
         global ctr
         ctr += 1
@@ -210,15 +202,16 @@ def test_with_fixed_v(dim=5,v=np.random.randn(dim + 1,n),N=1000):
 
         A = np.random.randint(low=1, high=9,size=(dim, dim))
         b = np.random.randint(low=1, high=9,size=(dim,))
-    
+
         sol = solve(A, b, sample_fn=fixed_v)
-    
+
         dist = _check_distance(A, b, sol)
         if dist > 1.e-5:
-            log.critical("Algorithm did not converge at trial %d. 2-normed distance = %15.10f" % (ix,dist))
-            log.critical('A = %s' % A)
-            log.critical('b = %s' % b)
-    log.info('Completed test with %d trials' % N)
+            log.warning("Algorithm did not converge at trial %d; the 2-normed distance to solution is %15.10f", ix, dist)
+            log.debug('A = %s', A)
+            log.debug('b = %s', b)
+    log.info('Completed test with %d trials', N)
+
 
 if __name__ == '__main__':
 
